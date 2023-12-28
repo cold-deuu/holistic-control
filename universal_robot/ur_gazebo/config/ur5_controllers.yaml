@@ -1,0 +1,43 @@
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: &loop_hz 125
+
+shoulder_pan_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: shoulder_pan_joint
+  pid: {p: 4000,  d: 200, i: 1, i_clamp: 1}
+  
+shoulder_lift_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: shoulder_lift_joint
+  pid: {p: 10000,  d: 200, i: 1, i_clamp: 1}
+  
+elbow_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: elbow_joint
+  pid: {p: 2000,  d: 20, i: 1, i_clamp: 1}
+
+wrist_1_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: wrist_1_joint
+  pid: {p: 500,  d: 1, i: 1, i_clamp: 1}
+  
+wrist_2_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: wrist_2_joint
+  pid: {p: 500,  d: 1, i: 1, i_clamp: 1}
+  
+wrist_3_joint_controller:
+  type: effort_controllers/JointPositionController
+  joint: wrist_3_joint
+  pid: {p: 10,  d: 0.1, i: 0, i_clamp: 1} 
+  
+joint_group_eff_controller:
+  type: effort_controllers/JointGroupEffortController
+  joints: 
+    - shoulder_pan_joint
+    - shoulder_lift_joint
+    - elbow_joint
+    - wrist_1_joint
+    - wrist_2_joint
+    - wrist_3_joint
