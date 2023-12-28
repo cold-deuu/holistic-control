@@ -38,6 +38,10 @@ Eigen::VectorXd q_d(6);
 
 // ros::Publisher pub_;
 ros::Subscriber sub_;
-Eigen::VectorXd & step_robot(const RobotWrapper robot,pinocchio::Data data,pinocchio::Model model,pinocchio::SE3 Tep);
+
+//controller_function
+Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pinocchio::SE3 Tep,Eigen::VectorXd jacobm);
 void JointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
 void joint_publish(Eigen::VectorXd q);
+double manipulability(Eigen::MatrixXd Jacob);
+Eigen::VectorXd jacobm(double m1, double m2, Eigen::VectorXd q1, Eigen::VectorXd q2);
