@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     //joint limits
     qlim_ << -6.28, -6.28, -3.14, -6.28, -6.28, -6.28,
              6.28, 6.28, 3.14, 6.28, 6.28, 6.28;
-    qlim_ *= -1;
+    // qlim_ *= -1;
 
     //set goal
     pinocchio::SE3 wTep;
@@ -85,10 +85,11 @@ int main(int argc, char** argv)
     while (ros::ok()){
         robot.computeAllTerms(data,q_,v_);
         robot.jacobianWorld(data, model.getJointId("wrist_3_joint"), J_); 
-        J1 = J2;
-        J2 = J_;
+
         q1 = q2;
         q2 = q_;
+        J1 = J2;
+        J2 = J_;
 
         //manipulator jacobian
         double m1 = manipulability(J1);
@@ -103,6 +104,7 @@ int main(int argc, char** argv)
         joint_publish(qd_);
         
         ROS_INFO_STREAM((q2-q1).transpose());
+        cout<<"et"<<et_<<endl;
         if(et_<0.02){
             ROS_INFO_STREAM("Success!");
             break;
@@ -187,9 +189,9 @@ Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pino
 
     //get desired q_d
     if (et_ > 0.5)
-        q_d *= 0.7 / et_;
+        q_d *= 0.7 / et_/2;
     else
-        q_d *= 1.4;
+        q_d *= 1.4/2;
     
     cout<<"q_d :"<<q_d.transpose()<<endl;
     return q_d;
@@ -236,7 +238,7 @@ void joint_publish(Eigen::VectorXd q)
 
 double manipulability(Eigen::MatrixXd Jacob)
 {
-    return (Jacob*Jacob.transpose()).determinant();
+    return sqrt((Jacob*Jacob.transpose()).determinant());
 }
 
 Eigen::VectorXd jacobm(double m1, double m2, Eigen::VectorXd q1, Eigen::VectorXd q2)
