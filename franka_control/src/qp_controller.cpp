@@ -6,6 +6,12 @@ using namespace Eigen;
 using namespace pinocchio;
 using namespace std;
 
+Eigen::MatrixXd J1,J2;
+Eigen::VectorXd q1,q2;
+Eigen::VectorXd J_m(6);
+//q1,J1 과거
+//q2,J2 현재
+
 int main(int argc, char** argv)
 {
     //Initial Setting
@@ -36,9 +42,7 @@ int main(int argc, char** argv)
     joint_ctrl_.push_back(std_msgs::Float64());
 
 
-    // pub_ = nh.advertise<sensor_msgs::JointState>("/franka_state_controller/joint_states",5);
     sub_ = nh.subscribe("joint_states",1000 ,&JointStateCallback);
-    // srv_ = nh.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
     
     //RobotWrapper
     const string ur_model_path = "/home/chan/holistic_panda/src/universal_robot";
@@ -49,55 +53,97 @@ int main(int argc, char** argv)
     const Model &model = robot.model();
     Data data(robot.model());
 
+    //initialize
     q_.setZero();
+    J1.setZero();
+    J2.setZero();
+    J1.resize(6,6);
+    J2.resize(6,6);
+    q1.setZero();
+    q2.setZero();
+    q1.resize(6);
+    q2.resize(6);
     r.sleep();
 
     //joint limits
     qlim_ << -6.28, -6.28, -3.14, -6.28, -6.28, -6.28,
              6.28, 6.28, 3.14, 6.28, 6.28, 6.28;
-
     qlim_ *= -1;
 
-
+    //set goal
     pinocchio::SE3 wTep;
     wTep.rotation().setIdentity();
-    wTep.translation() << 0.6, 0.2, 0.3;
+    wTep.translation() << 0.3, 0.4, 0.6;
+
+
+    //Pose initialize
+    joint_publish(q2);
+
+    int k = 1;
+
+    //control
     while (ros::ok()){
-        
         robot.computeAllTerms(data,q_,v_);
-        int id = model.getJointId("wrist_2_joint");
-        SE3 ab = data.oMi[id];
         robot.jacobianWorld(data, model.getJointId("wrist_3_joint"), J_); 
-        qd_ = step_robot(robot,data,model,wTep);
+        J1 = J2;
+        J2 = J_;
+        q1 = q2;
+        q2 = q_;
+
+        //manipulator jacobian
+        double m1 = manipulability(J1);
+        double m2 = manipulability(J2);
+        Eigen::VectorXd Jm = jacobm(m1,m2,q1,q2);
+        if (k<3){
+            Jm.setZero();     
+        }
+
+        //iteration
+        qd_ = step_robot(robot,data,model,wTep,Jm);
         joint_publish(qd_);
         
+        ROS_INFO_STREAM((q2-q1).transpose());
+        if(et_<0.02){
+            ROS_INFO_STREAM("Success!");
+            break;
+        }
+        else if((q2-q1).norm()<0.02 and k>10){
+            ROS_INFO_STREAM("FAIL");
+            break;
+        }
+        ROS_WARN_STREAM(Jm);
+        k += 1;
         ros::spinOnce();
         r.sleep();
+
     }
 
-
+    // ROS_INFO_STREAM("SUCCESS!");
     r.sleep();
     return 0;
 }
 
-Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pinocchio::SE3 Tep)
+Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pinocchio::SE3 Tep,Eigen::VectorXd jacobm)
 {
+    //get Q
     wTe_ = robot.position(data,model.getJointId("wrist_3_joint"));
     eTep_ = wTe_.inverse() * Tep;
-    et_ = abs(eTep_.translation().sum());
+    et_ = abs(eTep_.translation()(0)) + abs(eTep_.translation()(1)) + abs(eTep_.translation()(2));
     Q_.setIdentity();
     Q_.topLeftCorner(6,6) = Q_.topLeftCorner(6,6) * 0.01;
     Q_.bottomRightCorner(6,6) = Q_.bottomRightCorner(6,6) /et_;
 
+    //get desired v
     k_gain = k_gain.setIdentity() * 1.5;
     err_.head(3) = eTep_.translation();
     err_.tail(3) = pinocchio::log3(eTep_.rotation()); 
     v_star = k_gain * err_;
     v_star.tail(3) = v_star.tail(3) *1.3;
+
+    //get C(jacobian manipulator)
     Eigen::VectorXd C(12);
-    C.head(6) << 0.3, 0.3, 0.3, 0.3, 0.3, 0.3;
+    C.head(6) = jacobm;
     C.tail(6).setZero();
-    C /= 20;
 
     //Equality
     Eigen::MatrixXd Aeq(12,6);
@@ -121,29 +167,30 @@ Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pino
             Aineq(i,i) = -1;
         }
         if(qlim_(1,i) - q_(i)<=pi){
-            Bineq(i) = -gain * (((qlim_(1,i) - q_(i))-ps)/(pi-ps));
+            Bineq(i) = gain * (((qlim_(1,i) - q_(i))-ps)/(pi-ps));
             Aineq(i,i) = 1;
         }
     }
 
-
+    //rest settings for qp
     Eigen::VectorXd x(12);
     Eigen::VectorXi activeSet(0);
     size_t activeSetSize;
     Eigen::VectorXd solution(12);
     solution.head(6) <<q_;
     solution.tail(6).setZero();
+
+    //qp_solve
     double val = 0.0;
     double out = eiquadprog::solvers::solve_quadprog(Q_,C,Aeq,Beq,Aineq,Bineq,x,activeSet,activeSetSize);
-
     q_d = x.head(6);
-    ROS_WARN_STREAM(et_);
-    if (et_ > 0.5){
+
+    //get desired q_d
+    if (et_ > 0.5)
         q_d *= 0.7 / et_;
-    }
-    else{
+    else
         q_d *= 1.4;
-    }
+    
     cout<<"q_d :"<<q_d.transpose()<<endl;
     return q_d;
 }
@@ -187,18 +234,22 @@ void joint_publish(Eigen::VectorXd q)
     }
 }
 
-// double manipulability(Eigen::MatrixXd Jacob)
-// {
-//     return (Jacob*Jacob.transpose()).determinant();
-// }
+double manipulability(Eigen::MatrixXd Jacob)
+{
+    return (Jacob*Jacob.transpose()).determinant();
+}
 
-// Eigen::VectorXd jacobm(double manipulability,double manipulability_d,Eigen::VectorXd de)
-// {
-//     Eigen::VectorXd = jacobm(6);
-//     for (int i,i<6,i++)
-//     {
-//         jacobm(i) = (manipulability_d - manipulability)/dq(i)
-//     }
-
-//     return jacobm;
-// }
+Eigen::VectorXd jacobm(double m1, double m2, Eigen::VectorXd q1, Eigen::VectorXd q2)
+{
+    for(int i=0; i<6; i++){
+        if((q2(i)-q1(i)==0))
+        {
+            J_m(i) = 0;
+        }
+        else{
+            J_m(i) = (m2-m1)/(q2(i) - q1(i));
+        }
+        
+    }
+    return J_m;
+}
