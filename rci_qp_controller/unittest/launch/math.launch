@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="rci_qp_controller" type="rci_qp_controller_math"  name="rci_qp_controller_math" output="screen"/>
+</launch>

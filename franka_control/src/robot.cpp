@@ -11,7 +11,7 @@
 using namespace pinocchio;
 using namespace std;
 
-namespace qp_controller{
+namespace holistic_controller{
     namespace robot{
         RobotWrapper::RobotWrapper(const std::string & filename, const std::vector<std::string> & , bool verbose)
         :m_verbose(verbose)
@@ -95,6 +95,13 @@ namespace qp_controller{
             return pinocchio::getJointJacobian(m_model, data, index, pinocchio::WORLD, J);
         }
         
+        void RobotWrapper::jacobianLocal(const Data & data, const Model::JointIndex index, Eigen::MatrixXd & J) 
+        {   
+            Data::Matrix6x J_tmp(6, this->nv());
+            return pinocchio::getJointJacobian(m_model, data, index, pinocchio::LOCAL, J);
+        }
+        
+
         void RobotWrapper::jacobianWorld_d(const Data & data, const Model::JointIndex index, Eigen::MatrixXd & J, Eigen::VectorXd dq) 
         {      
             m_q = m_q + dq;

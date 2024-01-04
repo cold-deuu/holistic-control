@@ -10,7 +10,7 @@
 
 // qp_controller::robot::RobotWrapper
 
-namespace qp_controller{
+namespace holistic_controller{
     namespace robot{
         class RobotWrapper{
             public:
@@ -50,6 +50,8 @@ namespace qp_controller{
                 const Motion & acceleration(const Data & data, const Model::JointIndex index) const;
 
                 void jacobianWorld(const Data & data, const Model::JointIndex index, Eigen::MatrixXd & J);
+
+                void jacobianLocal(const Data & data, const Model::JointIndex index, Eigen::MatrixXd & J);
 
                 void jacobianWorld_d(const Data & data, const Model::JointIndex index, Eigen::MatrixXd & J, Eigen::VectorXd dq);
 

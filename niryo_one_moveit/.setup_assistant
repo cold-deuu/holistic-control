@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: niryo_robot_description
+    relative_path: urdf/one/niryo_one_gripper1_n_camera.urdf.xacro
+    xacro_args: ""
+  SRDF:
+    relative_path: config/niryo_one.srdf
+  CONFIG:
+    author_name: Seulchan Lee
+    author_email: lee081847@khu.ac.kr
+    generated_timestamp: 1694660159

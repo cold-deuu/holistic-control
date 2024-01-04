@@ -11,6 +11,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(pinocchio REQUIRED)
 find_package(eiquadprog REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(rci_qp_controller REQUIRED)
 
 
 find_package(catkin REQUIRED COMPONENTS
@@ -35,17 +36,34 @@ catkin_package(
  std_msgs
 )
 
-include_directories(include )
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  ${rci_qp_controller_INCLUDE_DIRS}
+)
 ADD_DEFINITIONS(-DEIGEN_RUNTIME_NO_MALLOC)
+
+install(PROGRAMS
+	
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 
 # Library
 SET(${PROJECT_NAME}_HEADERS
   include/franka_control/qp_controller.hpp
   include/franka_control/robot.hpp
+  include/franka_control/Trajectory.hpp
+  include/franka_control/math.hpp
+  include/franka_control/qp_solver.hpp
+  include/franka_control/robot_node.hpp
   )
 
 SET(${PROJECT_NAME}_SOURCES
   src/robot.cpp
+  src/math.cpp
+  src/Trajectory.cpp
+  src/qp_solver.cpp
 )
 
 
@@ -53,10 +71,20 @@ SET(CMAKE_BUILD_TYPE "Release")
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED  ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PUBLIC eiquadprog::eiquadprog pinocchio::pinocchio)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PUBLIC ${rci_qp_controller_LIBRARIES} eiquadprog::eiquadprog pinocchio::pinocchio -lpthread)
 
 ## Unit test - Math
-add_executable(${PROJECT_NAME}_control src/qp_controller.cpp)
+add_executable(${PROJECT_NAME}_control src/robot_node.cpp)
 add_dependencies(${PROJECT_NAME}_control ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_control ${PROJECT_NAME} eiquadprog::eiquadprog pinocchio::pinocchio)
 target_link_libraries(${PROJECT_NAME}_control ${catkin_LIBRARIES})
+
+
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
