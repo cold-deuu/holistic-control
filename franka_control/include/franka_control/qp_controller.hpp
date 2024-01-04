@@ -47,6 +47,7 @@ Eigen::VectorXd slack_(6);
 ros::Subscriber sub_;
 
 //controller_function
+<<<<<<< HEAD
 Eigen::VectorXd & step_robot(const RobotWrapper robot,Data &data,Model model,pinocchio::SE3 traj_se3,pinocchio::SE3 Tep,Eigen::VectorXd jacobm);
 void JointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
 void joint_publish(Eigen::VectorXd q);
@@ -57,3 +58,10 @@ Eigen::VectorXd q_cubic(ros::Time &ros_stime,Eigen::VectorXd &q_init, Eigen::Vec
 pinocchio::SE3 se3_cubic(ros::Time &ros_stime, pinocchio::SE3 &se3_init, pinocchio::SE3 &se3_goal, ros::Duration &ros_duration, ros::Time ros_time);
 Eigen::MatrixXd pseudoinv();
 Vector3d GetPhi(Matrix3d Rot, Matrix3d Rotd);
+=======
+Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pinocchio::SE3 Tep,Eigen::VectorXd jacobm);
+void JointStateCallback(const sensor_msgs::JointState::ConstPtr& msg);
+void joint_publish(Eigen::VectorXd q);
+double manipulability(Eigen::MatrixXd Jacob);
+Eigen::VectorXd jacobm(double m1, double m2, Eigen::VectorXd q1, Eigen::VectorXd q2);
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834

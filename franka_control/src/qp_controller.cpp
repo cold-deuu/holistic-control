@@ -10,6 +10,7 @@ using namespace std;
 Eigen::MatrixXd J1,J2;
 Eigen::VectorXd q1,q2;
 Eigen::VectorXd J_m(6);
+<<<<<<< HEAD
 Eigen::VectorXd q_d_cubic;
 pinocchio::SE3 pose_init_;
 pinocchio::SE3 pose_cubic_;
@@ -19,6 +20,8 @@ Eigen::VectorXd J_inv;
 Eigen::VectorXd dv(6);
 Eigen::VectorXd dq(6);
 Eigen::VectorXd v_d_;
+=======
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
 //q1,J1 과거
 //q2,J2 현재
 
@@ -51,6 +54,10 @@ int main(int argc, char** argv)
     joint_ctrl_.push_back(std_msgs::Float64());
     joint_ctrl_.push_back(std_msgs::Float64());
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
     sub_ = nh.subscribe("joint_states",1000 ,&JointStateCallback);
     
     //RobotWrapper
@@ -63,8 +70,11 @@ int main(int argc, char** argv)
     Data data(robot.model());
 
     //initialize
+<<<<<<< HEAD
     Eigen::VectorXd q_init(6);
     q_init << 0.0, -1.0, 1.0, 0.0, 0.0, 0.0;
+=======
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
     q_.setZero();
     J1.setZero();
     J2.setZero();
@@ -74,8 +84,12 @@ int main(int argc, char** argv)
     q2.setZero();
     q1.resize(6);
     q2.resize(6);
+<<<<<<< HEAD
     slack_.setZero();
     ros::Duration(0.5).sleep();
+=======
+    r.sleep();
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
 
     //joint limits
     qlim_ << -6.28, -6.28, -3.14, -6.28, -6.28, -6.28,
@@ -85,6 +99,7 @@ int main(int argc, char** argv)
     //set goal
     pinocchio::SE3 wTep;
     wTep.rotation().setIdentity();
+<<<<<<< HEAD
     wTep.translation() << -0.2, 0.2, 0.6;
 
     //Pose initialize
@@ -105,17 +120,37 @@ int main(int argc, char** argv)
         robot.jacobianWorld(data, model.getJointId("wrist_3_joint"), J_);
 
         //manipulator jacobian
+=======
+    wTep.translation() << 0.3, 0.4, 0.6;
+
+
+    //Pose initialize
+    joint_publish(q2);
+
+    int k = 1;
+
+    //control
+    while (ros::ok()){
+        robot.computeAllTerms(data,q_,v_);
+        robot.jacobianWorld(data, model.getJointId("wrist_3_joint"), J_); 
+
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
         q1 = q2;
         q2 = q_;
         J1 = J2;
         J2 = J_;
 
+<<<<<<< HEAD
+=======
+        //manipulator jacobian
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
         double m1 = manipulability(J1);
         double m2 = manipulability(J2);
         Eigen::VectorXd Jm = jacobm(m1,m2,q1,q2);
         if (k<3){
             Jm.setZero();     
         }
+<<<<<<< HEAD
         //get trajectory
         pose_cubic_ = se3_cubic(stime,pose_init_,wTep,duration,ros::Time::now());
         
@@ -132,16 +167,40 @@ int main(int argc, char** argv)
             break;
         }
 
+=======
+
+        //iteration
+        qd_ = step_robot(robot,data,model,wTep,Jm);
+        joint_publish(qd_);
+        
+        ROS_INFO_STREAM((q2-q1).transpose());
+        cout<<"et"<<et_<<endl;
+        if(et_<0.02){
+            ROS_INFO_STREAM("Success!");
+            break;
+        }
+        else if((q2-q1).norm()<0.02 and k>10){
+            ROS_INFO_STREAM("FAIL");
+            break;
+        }
+        ROS_WARN_STREAM(Jm);
+        k += 1;
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
         ros::spinOnce();
         r.sleep();
-    }
 
+<<<<<<< HEAD
     ROS_INFO_STREAM(robot.position(data,model.getJointId("wrist_3_joint")));
+=======
+    }
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
 
+    // ROS_INFO_STREAM("SUCCESS!");
     r.sleep();
     return 0;
 }
 
+<<<<<<< HEAD
 Eigen::VectorXd & step_robot(const RobotWrapper robot,Data &data,Model model,pinocchio::SE3 traj_se3,pinocchio::SE3 Tep,Eigen::VectorXd jacobm)
 {
     //initialize
@@ -172,6 +231,24 @@ Eigen::VectorXd & step_robot(const RobotWrapper robot,Data &data,Model model,pin
     // err_.tail(3) = pinocchio::log3(eTep_.rotation()); 
     // v_star.head(3) = err_.head(3) * 1000;
     // v_star.tail(3) = err_.tail(3) * 1000;
+=======
+Eigen::VectorXd & step_robot(const RobotWrapper robot,Data data,Model model,pinocchio::SE3 Tep,Eigen::VectorXd jacobm)
+{
+    //get Q
+    wTe_ = robot.position(data,model.getJointId("wrist_3_joint"));
+    eTep_ = wTe_.inverse() * Tep;
+    et_ = abs(eTep_.translation()(0)) + abs(eTep_.translation()(1)) + abs(eTep_.translation()(2));
+    Q_.setIdentity();
+    Q_.topLeftCorner(6,6) = Q_.topLeftCorner(6,6) * 0.01;
+    Q_.bottomRightCorner(6,6) = Q_.bottomRightCorner(6,6) /et_;
+
+    //get desired v
+    k_gain = k_gain.setIdentity() * 1.5;
+    err_.head(3) = eTep_.translation();
+    err_.tail(3) = pinocchio::log3(eTep_.rotation()); 
+    v_star = k_gain * err_;
+    v_star.tail(3) = v_star.tail(3) *1.3;
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
 
     //get C(jacobian manipulator)
     Eigen::VectorXd C(12);
@@ -210,11 +287,15 @@ Eigen::VectorXd & step_robot(const RobotWrapper robot,Data &data,Model model,pin
     Aineq *= -1;
     // Bineq *= -1;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
     //rest settings for qp
     Eigen::VectorXd x(12);
     Eigen::VectorXi activeSet;
     size_t activeSetSize;
+<<<<<<< HEAD
     // Eigen::VectorXd solution(12);
     // solution.head(6).setZero();
     // solution.tail(6).setZero();
@@ -235,6 +316,24 @@ Eigen::VectorXd & step_robot(const RobotWrapper robot,Data &data,Model model,pin
         q_d *= 1.4;
     else
         q_d *= 0.0;
+=======
+    Eigen::VectorXd solution(12);
+    solution.head(6) <<q_;
+    solution.tail(6).setZero();
+
+    //qp_solve
+    double val = 0.0;
+    double out = eiquadprog::solvers::solve_quadprog(Q_,C,Aeq,Beq,Aineq,Bineq,x,activeSet,activeSetSize);
+    q_d = x.head(6);
+
+    //get desired q_d
+    if (et_ > 0.5)
+        q_d *= 0.7 / et_/2;
+    else
+        q_d *= 1.4/2;
+    
+    cout<<"q_d :"<<q_d.transpose()<<endl;
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
     return q_d;
 }
 
@@ -278,7 +377,10 @@ void joint_publish(Eigen::VectorXd q)
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
 double manipulability(Eigen::MatrixXd Jacob)
 {
     return sqrt((Jacob*Jacob.transpose()).determinant());
@@ -298,6 +400,7 @@ Eigen::VectorXd jacobm(double m1, double m2, Eigen::VectorXd q1, Eigen::VectorXd
     }
     return J_m;
 }
+<<<<<<< HEAD
 
 Matrix3d AngleAngle_to_Rot(Vector3d axis, double angle) {
     Matrix3d Rot;
@@ -433,3 +536,5 @@ Eigen::MatrixXd pseudoinv(){
   phi = -0.5* phi;
   return phi;
  }
+=======
+>>>>>>> 3cb764c5f051eb10fe377f111f6b233903780834
