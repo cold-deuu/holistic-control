@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: robot_description
+    relative_path: robots/franka_emika_panda_robot.urdf
+    xacro_args: ""
+  SRDF:
+    relative_path: config/panda.srdf
+  CONFIG:
+    author_name: SCLee
+    author_email: lee081847@khu.ac.kr
+    generated_timestamp: 1704605413
